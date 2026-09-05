@@ -4,10 +4,20 @@ Command Line Interface for Hierarchical Context Tree Engine.
 import argparse
 import csv
 import json
+import os
 import sys
+from pathlib import Path
 from agents.models import SystemTaskPayload
 from agents.supervisor import SystemSupervisor
 from agents.base import AuditLogger
+
+# Initialize audit logger with env var or secure default for development
+AuditLogger.initialize(
+    secret_key=os.getenv(
+        "AUDIT_SECRET_KEY",
+        "dev-only-key-change-in-production-env"
+    )
+)
 
 supervisor = SystemSupervisor(model_provider="mock")
 
@@ -80,7 +90,19 @@ def main(argv=None):
         return 0
 
     if args.command == "batch":
-        with open(args.input, mode="r", encoding="utf-8-sig") as f:
+        # Validate input path exists and is a file
+        input_path = Path(args.input).resolve()
+        if not input_path.is_file():
+            print(f"Error: Input file not found: {args.input}", file=sys.stderr)
+            return 1
+
+        # Validate output path directory exists
+        output_path = Path(args.output).resolve()
+        if not output_path.parent.is_dir():
+            print(f"Error: Output directory not found: {output_path.parent}", file=sys.stderr)
+            return 1
+
+        with open(input_path, mode="r", encoding="utf-8-sig") as f:
             reader = csv.DictReader(f)
             fieldnames = list(reader.fieldnames or [])
             rows = list(reader)
@@ -88,13 +110,20 @@ def main(argv=None):
         out_fields = fieldnames + ["overall_urgency", "integrity_status", "total_alerts", "audit_hash"]
         out_rows = []
         for r in rows:
+            try:
+                primary = float(r.get("primary_metric", 15.0))
+                secondary = float(r.get("secondary_metric", 5.0))
+            except (ValueError, TypeError) as e:
+                print(f"Warning: Skipping row with invalid metrics: {e}", file=sys.stderr)
+                continue
+
             payload = SystemTaskPayload(
                 task_id=r.get("task_id", "TASK-01"),
                 target_identifier=r.get("target_identifier", "TARGET-01"),
-                primary_metric=float(r.get("primary_metric", 15.0)),
-                secondary_metric=float(r.get("secondary_metric", 5.0)),
+                primary_metric=primary,
+                secondary_metric=secondary,
                 status_descriptor=r.get("status_descriptor", "NOMINAL"),
-                is_critical_flag=bool(r.get("is_critical_flag", False)),
+                is_critical_flag=str(r.get("is_critical_flag", "")).lower() in ("true", "1", "yes"),
             )
             dossier = supervisor.process_task(payload)
             row_dict = dict(r)
@@ -104,7 +133,7 @@ def main(argv=None):
             row_dict["audit_hash"] = dossier.audit_hash
             out_rows.append(row_dict)
 
-        with open(args.output, mode="w", encoding="utf-8", newline="") as f:
+        with open(output_path, mode="w", encoding="utf-8", newline="") as f:
             writer = csv.DictWriter(f, fieldnames=out_fields)
             writer.writeheader()
             writer.writerows(out_rows)

@@ -3,11 +3,9 @@ Tree Pruning Strategies for Hierarchical Context Tree Engine.
 Implements pluggable pruning strategies: DepthPruner, RelevancePruner, AgePruner, SizePruner.
 """
 import time
-import math
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Dict, Any, List, Optional, Callable
-from .models import FrontierPayload, ExecutionStatus
 
 
 class PruningStrategy(ABC):

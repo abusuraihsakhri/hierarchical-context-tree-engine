@@ -3,9 +3,13 @@ Automated Pytest Test Suite for Hierarchical Context Tree Engine.
 Domain: Long-Horizon Agent Context & State Architecture
 Standard: Autonomous Agent State Machine & Token Economy RFC
 """
+import os
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
+
+# Set audit key before importing modules that use it
+os.environ.setdefault("AUDIT_SECRET_KEY", "test-suite-audit-key-2026")
 
 import pytest
 from agents.base import PHIGuard, AuditLogger, SecurityException
