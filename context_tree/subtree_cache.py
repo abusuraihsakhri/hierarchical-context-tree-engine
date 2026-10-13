@@ -2,6 +2,7 @@
 Subtree Caching for Hierarchical Context Tree Engine.
 Caches resolved subtrees keyed by content hash with configurable TTL.
 """
+import copy
 import hashlib
 import json
 import time
@@ -31,6 +32,8 @@ class SubtreeCache:
     """LRU cache for resolved subtrees with TTL expiration."""
 
     def __init__(self, max_size: int = 256, default_ttl: float = 3600.0):
+        if max_size < 1 or default_ttl <= 0:
+            raise ValueError("max_size and default_ttl must be positive")
         self._cache: Dict[str, CacheEntry] = {}
         self.max_size = max_size
         self.default_ttl = default_ttl
@@ -55,17 +58,21 @@ class SubtreeCache:
             return None
         entry.touch()
         self._total_hits += 1
-        return entry.subtree
+        return copy.deepcopy(entry.subtree)
 
     def put(self, key: str, subtree: Dict[str, Any], ttl: Optional[float] = None) -> None:
         """Cache a subtree with the given key."""
-        if len(self._cache) >= self.max_size:
+        effective_ttl = self.default_ttl if ttl is None else ttl
+        if effective_ttl < 0:
+            raise ValueError("ttl must be non-negative")
+        self.prune_expired()
+        if key not in self._cache and len(self._cache) >= self.max_size:
             self._evict_lru()
         self._cache[key] = CacheEntry(
             key=key,
-            subtree=subtree,
+            subtree=copy.deepcopy(subtree),
             created_at=time.time(),
-            ttl_seconds=ttl or self.default_ttl,
+            ttl_seconds=effective_ttl,
             last_accessed=time.time(),
         )
 
