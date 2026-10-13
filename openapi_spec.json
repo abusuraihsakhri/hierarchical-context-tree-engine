@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Hierarchical Context Tree Engine API",
-    "description": "Enterprise Distributed Component Platform (Clinical & Cryptographic AI) adhering to CAP / CLSI / NIST Standards.",
+    "description": "Deterministic threshold-based task evaluation API with in-memory HMAC audit entries.",
     "version": "3.0.0-ENTERPRISE",
     "contact": {
       "name": "Dr. Abu Suraih Sakhri",
@@ -15,17 +15,17 @@
         "summary": "Health and metadata check",
         "responses": {
           "200": {
-            "description": "System optimal"
+            "description": "Process is available"
           }
         }
       }
     },
     "/metrics": {
       "get": {
-        "summary": "Prometheus operational metrics",
+        "summary": "In-memory JSON counters",
         "responses": {
           "200": {
-            "description": "Prometheus text metrics"
+            "description": "JSON process-level metrics"
           }
         }
       }
@@ -69,14 +69,17 @@
         },
         "responses": {
           "200": {
-            "description": "Consensus dossier with HMAC signature"
+            "description": "Consensus dossier with in-memory HMAC audit hash"
+          },
+          "422": {
+            "description": "Validation or sensitive-identifier rejection"
           }
         }
       }
     },
     "/api/chat": {
       "post": {
-        "summary": "Air-gapped supervisory conversational assistant",
+        "summary": "Mock supervisory response (no external LLM)",
         "requestBody": {
           "content": {
             "application/json": {
@@ -103,12 +106,30 @@
     },
     "/api/audit/logs": {
       "get": {
-        "summary": "Retrieve and cryptographically verify HMAC audit trail",
+        "summary": "Read in-memory audit metadata with a configured secret header",
         "responses": {
           "200": {
             "description": "Cryptographic audit trail"
+          },
+          "403": {
+            "description": "Audit log access is disabled or header key is invalid"
           }
-        }
+        },
+        "security": [
+          {
+            "auditReadKey": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "auditReadKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Audit-Read-Key",
+        "description": "Matches AUDIT_LOG_READ_KEY configured on server; endpoint disabled if unset."
       }
     }
   }

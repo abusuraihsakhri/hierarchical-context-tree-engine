@@ -17,7 +17,11 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 requires-python = ">=3.9"
-dependencies = []
+dependencies = ["pydantic>=2.0,<3"]
+
+[project.optional-dependencies]
+server = ["fastapi>=0.100,<1", "uvicorn>=0.23,<1"]
+test = ["pytest>=7,<10", "httpx>=0.25,<1"]
 
 [project.scripts]
 hierarchical-context-tree-engine = "context_tree.cli:main"
@@ -25,3 +29,10 @@ hierarchical-context-tree-engine = "context_tree.cli:main"
 [project.urls]
 Homepage = "https://github.com/abusuraihsakhri/hierarchical-context-tree-engine"
 Repository = "https://github.com/abusuraihsakhri/hierarchical-context-tree-engine.git"
+
+[tool.setuptools]
+py-modules = ["cli", "enrichment", "simulator", "context_tree_app"]
+
+[tool.setuptools.packages.find]
+include = ["agents*", "context_tree*"]
+namespaces = false

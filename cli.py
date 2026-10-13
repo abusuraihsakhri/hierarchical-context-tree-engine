@@ -11,14 +11,6 @@ from agents.models import SystemTaskPayload
 from agents.supervisor import SystemSupervisor
 from agents.base import AuditLogger
 
-# Initialize audit logger with env var or secure default for development
-AuditLogger.initialize(
-    secret_key=os.getenv(
-        "AUDIT_SECRET_KEY",
-        "dev-only-key-change-in-production-env"
-    )
-)
-
 supervisor = SystemSupervisor(model_provider="mock")
 
 
@@ -86,8 +78,8 @@ def main(argv=None):
     if args.command == "verify-audit":
         trail = AuditLogger.get_trail()
         valid = AuditLogger.verify_integrity()
-        print(f"Audit Trail Blocks: {len(trail)} | Cryptographic Integrity Verified: {valid}")
-        return 0
+        print(f"Audit Trail Blocks (current process only): {len(trail)} | Cryptographic Integrity Verified: {valid and bool(trail)}")
+        return 0 if valid and trail else 1
 
     if args.command == "batch":
         # Validate input path exists and is a file

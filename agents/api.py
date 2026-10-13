@@ -1,10 +1,12 @@
 """
 FastAPI REST API Server for Hierarchical Context Tree Engine.
 """
-from typing import Dict, Any, List
-from fastapi import FastAPI, HTTPException
+import hmac
+import os
+from typing import Dict, Any, List, Optional
+from fastapi import FastAPI, Header, HTTPException
 from pydantic import BaseModel
-from .base import AuditLogger, PHIGuard
+from .base import AuditLogger, PHIGuard, SecurityException
 from .models import SystemTaskPayload, ConsensusDossier
 from .supervisor import SystemSupervisor
 
@@ -37,7 +39,10 @@ def metrics():
 
 @app.post("/api/audit")
 def api_audit(payload: SystemTaskPayload):
-    dossier = supervisor.process_task(payload)
+    try:
+        dossier = supervisor.process_task(payload)
+    except SecurityException:
+        raise HTTPException(status_code=422, detail="Sensitive identifiers are not accepted")
     return dossier.to_dict()
 
 
@@ -51,5 +56,11 @@ def api_chat(req: ChatRequest):
 
 
 @app.get("/api/audit/logs")
-def api_audit_logs():
+def api_audit_logs(x_audit_read_key: Optional[str] = Header(default=None)):
+    """Audit metadata is restricted; identifier-bearing logs are not public."""
+    expected = os.getenv("AUDIT_LOG_READ_KEY")
+    if not expected or not x_audit_read_key or not hmac.compare_digest(
+        x_audit_read_key, expected
+    ):
+        raise HTTPException(status_code=403, detail="Audit access denied")
     return {"audit_trail": AuditLogger.get_trail(), "verified": AuditLogger.verify_integrity()}
