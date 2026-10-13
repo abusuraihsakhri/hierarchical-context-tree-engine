@@ -6,12 +6,17 @@ on:
   pull_request:
     branches: [ master, main ]
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test-and-audit:
     runs-on: ubuntu-latest
     env:
       AUDIT_SECRET_KEY: "ci-only-test-key-not-for-production"
     strategy:
+      fail-fast: false
       matrix:
         python-version: ["3.10", "3.11", "3.12"]
 
@@ -35,7 +40,7 @@ jobs:
       run: |
         pytest -v
 
-    - name: Security SAST & Zero-PHI Audit
+    - name: Audit chain self-check
       run: |
         python -c "
         from agents.base import PHIGuard, AuditLogger
