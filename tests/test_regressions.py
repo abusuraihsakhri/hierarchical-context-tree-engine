@@ -143,3 +143,22 @@ console.log("browser simulation passed");
         capture_output=True, text=True,
     )
     assert check.returncode == 0, check.stderr
+
+
+def test_composite_pruner_honors_priority():
+    from context_tree.pruning import SizePruner
+
+    composite = CompositePruner()
+    composite.add_strategy(DepthPruner(max_depth=1), priority=10)
+    composite.add_strategy(SizePruner(max_tokens=5), priority=1)
+    assert composite.get_strategy_names()[0].startswith("SizePruner")
+
+
+def test_audit_field_delimiters_do_not_allow_substitution():
+    audit = AuditTrail("long-test-audit-secret-key")
+    audit.log("operator|tier", "stage", "START", {"task": 1})
+    assert audit.verify_integrity()
+    # Under a delimiter-concatenated signature this substitution has identical bytes.
+    audit.logs[0]["actor"] = "operator"
+    audit.logs[0]["actor_tier"] = "tier|stage"
+    assert not audit.verify_integrity()
