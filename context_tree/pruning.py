@@ -84,8 +84,10 @@ class CompositePruner:
         self._prune_log: List[Dict[str, Any]] = []
 
     def add_strategy(self, strategy: PruningStrategy, priority: int = 0) -> None:
+        """Lower priority numbers run first; ties retain insertion order."""
+        strategy.priority = priority
         self.strategies.append(strategy)
-        self.strategies.sort(key=lambda s: getattr(s, 'priority', 0))
+        self.strategies.sort(key=lambda s: getattr(s, "priority", 0))
 
     def should_prune(self, node: Dict[str, Any], context: Optional[Dict[str, Any]] = None) -> bool:
         ctx = context or {"current_time": time.time()}
