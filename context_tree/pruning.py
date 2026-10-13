@@ -53,7 +53,9 @@ class AgePruner(PruningStrategy):
     max_age_seconds: float = 3600.0
 
     def should_prune(self, node: Dict[str, Any], context: Dict[str, Any]) -> bool:
-        created_at = node.get("created_at", 0)
+        created_at = node.get("created_at")
+        if created_at is None:
+            return False
         current_time = context.get("current_time", time.time())
         return (current_time - created_at) > self.max_age_seconds
 
@@ -97,8 +99,8 @@ class CompositePruner:
                 return True
         return False
 
-    def prune_tree(self, tree: Dict[str, Any], context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        """Recursively prune a tree structure."""
+    def prune_tree(self, tree: Dict[str, Any], context: Optional[Dict[str, Any]] = None) -> Optional[Dict[str, Any]]:
+        """Return a pruned copy without modifying the caller's tree."""
         ctx = context or {"current_time": time.time()}
         if self.should_prune(tree, ctx):
             return None
@@ -108,8 +110,7 @@ class CompositePruner:
             result = self.prune_tree(child, ctx)
             if result is not None:
                 pruned_children.append(result)
-        tree["children"] = pruned_children
-        return tree
+        return {**tree, "children": pruned_children}
 
     def get_prune_log(self) -> List[Dict[str, Any]]:
         return list(self._prune_log)
